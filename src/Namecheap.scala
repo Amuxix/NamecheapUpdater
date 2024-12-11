@@ -1,5 +1,3 @@
-package updater
-
 import cats.effect.IO
 import org.http4s.EntityDecoder
 import org.http4s.Uri

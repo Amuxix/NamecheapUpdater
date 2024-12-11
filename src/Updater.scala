@@ -65,7 +65,7 @@ object Updater extends IOApp:
     }
       .flatMap(_.fold(help(None))(IO.pure))
       .attempt
-      .flatMap(_.fold(error => Logger[IO].error(error).as(ExitCode.Error), IO.pure))
+      .flatMap(_.fold(error => Logger[IO].error(error)("Program failed").as(ExitCode.Error), IO.pure))
 
   override def run(args: List[String]): IO[ExitCode] =
     for

@@ -1,12 +1,12 @@
 //> using scala 3.5.0
-//> using dep org.typelevel::cats-effect:3.5.4
-//> using dep io.circe::circe-core:0.14.9
-//> using dep io.circe::circe-parser:0.14.9
+//> using dep org.typelevel::cats-effect:3.5.7
+//> using dep io.circe::circe-core:0.14.10
+//> using dep io.circe::circe-parser:0.14.10
 //> using dep com.github.cb372::cats-retry:3.1.3
 //> using dep org.typelevel::log4cats-slf4j:2.7.0
-//> using dep ch.qos.logback:logback-classic:1.5.7
-//> using dep com.github.pureconfig::pureconfig-core:0.17.7
-//> using dep com.github.pureconfig::pureconfig-cats-effect:0.17.7
+//> using dep ch.qos.logback:logback-classic:1.5.12
+//> using dep com.github.pureconfig::pureconfig-core:0.17.8
+//> using dep com.github.pureconfig::pureconfig-cats-effect:0.17.8
 //> using dep org.http4s::http4s-dsl:1.0.0-M38
 //> using dep org.http4s::http4s-ember-client:1.0.0-M38
 //> using dep org.http4s::http4s-ember-server:1.0.0-M38
@@ -38,7 +38,7 @@ object Updater extends IOApp:
       "\n  removeHost record host (example: removeHost A *)"
   }.as(ExitCode.Error)
 
-  def main(using Logger[IO]): IO[ExitCode] =
+  def main(args: List[String])(using Logger[IO]): IO[ExitCode] =
     args.headOption.traverse {
       case "addHost" if args.tail.size == 3 =>
         namecheap.use { namecheap =>
@@ -71,6 +71,6 @@ object Updater extends IOApp:
     for
       given Slf4jFactory[IO] <- IO(Slf4jFactory.create[IO])
       given Logger[IO]       <- Slf4jFactory[IO].fromName(summon[LoggerName].value)
-      exitCode <- main
+      exitCode <- main(args)
     yield exitCode
 

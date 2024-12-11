@@ -15,8 +15,6 @@
 //> using dep org.scala-lang.modules::scala-xml:2.3.0
 //> using file Namecheap.scala
 
-package updater
-
 import cats.effect.{ExitCode, IO, IOApp, Resource}
 import cats.instances.option.*
 import cats.syntax.traverse.*
@@ -29,11 +27,9 @@ sealed trait CLI
 
 object Updater extends IOApp:
 
-  val namecheap = for
-    given Slf4jFactory[IO] <- Resource.eval(IO(Slf4jFactory.create[IO]))
-    given Logger[IO]       <- Resource.eval(Slf4jFactory[IO].fromName(summon[LoggerName].value))
+  val namecheap: Resource[IO, Namecheap] = for
     client                 <- EmberClientBuilder.default[IO].build
-    namecheap               = Namecheap(client, "Aifosi", "001353b73c7a4c248872945ce212d217", "aifosi.top")
+    namecheap               = Namecheap(client, "***", "***", "***")
   yield namecheap
 
   def help(arg: Option[String]) = IO.println {
@@ -42,14 +38,16 @@ object Updater extends IOApp:
       "\n  removeHost record host (example: removeHost A *)"
   }.as(ExitCode.Error)
 
-  override def run(args: List[String]): IO[ExitCode] =
+  def main(using Logger[IO]): IO[ExitCode] =
     args.headOption.traverse {
       case "addHost" if args.tail.size == 3 =>
         namecheap.use { namecheap =>
           for
             hosts   <- namecheap.getHosts
-            newHosts = (hosts :+ Host(args(1), args(2), args(3))).distinct
-            _       <- IO.whenA(newHosts.size > hosts.size)(namecheap.setHosts(newHosts).void)
+            host     = Host(args(1), args(2), args(3))
+            log      = Logger[IO].info(s"Added new host $host")
+            newHosts = (hosts :+ host).distinct
+            _       <- IO.whenA(newHosts.size > hosts.size)(namecheap.setHosts(newHosts) *> log)
           yield ExitCode.Success
         }
 
@@ -57,8 +55,9 @@ object Updater extends IOApp:
         namecheap.use { namecheap =>
           for
             hosts   <- namecheap.getHosts
+            log      = Logger[IO].info(s"Removed host type: ${args(1)}, host name: ${args(2)}")
             newHosts = hosts.filterNot(host => host.recordType == args(1) && host.hostName == args(2))
-            _       <- IO.whenA(newHosts.size > hosts.size)(namecheap.setHosts(newHosts).void)
+            _       <- IO.whenA(newHosts.size > hosts.size)(namecheap.setHosts(newHosts) *> log)
           yield ExitCode.Success
         }
 
@@ -66,5 +65,12 @@ object Updater extends IOApp:
     }
       .flatMap(_.fold(help(None))(IO.pure))
       .attempt
-      .flatMap(_.fold(error => IO.println(error).as(ExitCode.Error), IO.pure))
+      .flatMap(_.fold(error => Logger[IO].error(error).as(ExitCode.Error), IO.pure))
+
+  override def run(args: List[String]): IO[ExitCode] =
+    for
+      given Slf4jFactory[IO] <- IO(Slf4jFactory.create[IO])
+      given Logger[IO]       <- Slf4jFactory[IO].fromName(summon[LoggerName].value)
+      exitCode <- main
+    yield exitCode
 

@@ -57,7 +57,7 @@ object Updater extends IOApp:
             hosts   <- namecheap.getHosts
             log      = Logger[IO].info(s"Removed host type: ${args(1)}, host name: ${args(2)}")
             newHosts = hosts.filterNot(host => host.recordType == args(1) && host.hostName == args(2))
-            _       <- IO.whenA(newHosts.size > hosts.size)(namecheap.setHosts(newHosts) *> log)
+            _       <- IO.whenA(newHosts.size < hosts.size)(namecheap.setHosts(newHosts) *> log)
           yield ExitCode.Success
         }
 
